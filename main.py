@@ -97,7 +97,7 @@ for i in range(n_trials):
 
 times = np.array([1,2,5,10,20,100,200,500,1000,2000])
 
-for t in times:
+for t in range(3600):
     fig = plt.figure('Test', (9,6))
     ax1 = fig.add_subplot(111)
     ax1.axvspan(a, b, color = 'black', alpha = 0.1, lw = 0)
@@ -117,7 +117,7 @@ for t in times:
     for t2 in ax2.get_yticklabels():
         t2.set_color('red')
     
-    plt.savefig('Test_%d' % t)
+    plt.savefig('t_%d.png' % (t+1))
     plt.close()
 
 #plt.savefig('%05d.png' % t)
