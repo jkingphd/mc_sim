@@ -20,49 +20,63 @@ n_trials = 1000 # number of simulations
 sigma = np.sqrt(2*D)
 
 # Import lookup tables
-scale = 0.1
+s_attract = 0.1
+s_repel = 0.25
 x_table = np.load("tables\L1_x.npy")
-c_table = np.load("tables\L1_c.npy")*scale
-dc_table = np.load("tables\L1_dc.npy")*1E-6*scale # Fix this in import tables later.
+c_attract = np.load("tables\L1_c.npy")*s_attract
+dc_attract = np.load("tables\L1_dc.npy")*1E-6*s_attract # Fix this in import tables later.
+c_repel = np.flipud(np.load("tables\L1_c.npy")*s_repel)
+dc_repel = np.flipud(np.load("tables\L1_dc.npy")*1E-6*s_repel)
 
-def int_tables(pos, t, x_table, c_table, dc_table):
+def int_tables(pos, t, x_table, c_attract, dc_attract):
     '''Interpolate values for c(pos,t) and dc(pos,t)'''
     idx = (np.abs(x_table - pos)).argmin()
     if pos == x_table[0]:
-        c = c_table[0,t]
-        dc = dc_table[0,t]
+        c = c_attract[0,t]
+        dc = dc_attract[0,t]
     elif pos == x_table[-1]:
-        c = c_table[-1,t]
-        dc = dc_table[-1,t]
+        c = c_attract[-1,t]
+        dc = dc_attract[-1,t]
     else:
         if x_table[idx] > pos:
             x1 = x_table[idx-1]; x2 = x_table[idx];
-            c1 = c_table[idx-1,t]; c2 = c_table[idx,t];
-            dc1 = dc_table[idx-1,t]; dc2 = dc_table[idx,t];
+            c1 = c_attract[idx-1,t]; c2 = c_attract[idx,t];
+            dc1 = dc_attract[idx-1,t]; dc2 = dc_attract[idx,t];
         else:
             x1 = x_table[idx]; x2 = x_table[idx+1];
-            c1 = c_table[idx,t]; c2 = c_table[idx+1,t];
-            dc1 = dc_table[idx-1,t]; dc2 = dc_table[idx,t];
+            c1 = c_attract[idx,t]; c2 = c_attract[idx+1,t];
+            dc1 = dc_attract[idx-1,t]; dc2 = dc_attract[idx,t];
         c = ((c2-c1)/(x2-x1))*(pos-x1) + c1
         dc = ((dc2-dc1)/(x2-x1))*(pos-x1) + dc1
     return c, dc
     
-def calc_v(pos, t, x_table, c_table, dc_table):
+def calc_v(pos, t, x_table, c_attract, dc_attract, c_repel, dc_repel):
     '''Calculate drift velocity as a function of c(pos,t) and dc(pos,t)'''
     v = 22. # µm/s
     chi = 50000. # µm^2/s
+    chi2 = 50000. # µm^2/s
     k = 0.125 # mM
+    k2 = 0.125 # mM
     if pos < x_table[0]:
         pos = x_table[0]
-        c, dc = int_tables(pos, t, x_table, c_table, dc_table)
+        c, dc = int_tables(pos, t, x_table, c_attract, dc_attract)
+        c2, dc2 = int_tables(pos, t, x_table, c_repel, dc_repel)
     elif pos > x_table[-1]:
         pos = x_table[-1]
-        c, dc = int_tables(pos, t, x_table, c_table, dc_table)
+        c, dc = int_tables(pos, t, x_table, c_attract, dc_attract)
+        c2, dc2 = int_tables(pos, t, x_table, c_repel, dc_repel)
     else:
-        c, dc = int_tables(pos, t, x_table, c_table, dc_table)
-    return ((8*v)/(3*np.pi))*np.tanh(((chi*np.pi)/(8*v))*(k/np.power((k+c),2))*dc)
+        c, dc = int_tables(pos, t, x_table, c_attract, dc_attract)
+        c2, dc2 = int_tables(pos, t, x_table, c_repel, dc_repel)
+    v1 = ((8*v)/(3*np.pi))*np.tanh(((chi*np.pi)/(8*v))*(k/np.power((k+c),2))*dc)
+    v2 = ((8*v)/(3*np.pi))*np.tanh(((chi2*np.pi)/(8*v))*(k2/np.power((k+c2),2))*dc2)
+    #print v1, v2
+    if np.abs(v1) > np.abs(v2):
+        return v1
+    else:
+        return v2
 
-def pop_plot(data, thresh, save = False, fname = '0.png'):
+def pop_plot(data, thresh = a + L + 10., save = False, fname = '0.png'):
     '''Plot percentage of population in target zone.'''
     t = np.arange(0,np.shape(data)[0])
     frac = 100*np.sum(data >= thresh, axis = 1)/np.float(np.shape(data)[1])
@@ -122,11 +136,14 @@ def hist_plot(data, t, save = False, fname = '0.png'):
         tl.set_color('blue')
         
     ax2 = ax1.twinx()
-    ax2.plot(x_table, c_table[:,t], color = 'red', lw = 1)
-    ax2.scatter(x_table, c_table[:,t], color = 'red', s = 10, lw = 0)
-    ax2.axis([x_table[0],x_table[-1],0,c_table.max()])
+    ax2.plot(x_table, c_attract[:,t], color = 'green', lw = 1)
+    ax2.scatter(x_table, c_attract[:,t], color = 'green', s = 10, lw = 0)
+    ax2.plot(x_table, c_repel[:,t], color = 'red', lw = 1)
+    ax2.scatter(x_table, c_repel[:,t], color = 'red', s = 10, lw = 0)
+    c_max = np.max([c_attract.max(), c_repel.max()])
+    ax2.axis([x_table[0],x_table[-1],0,c_max])
     ax2.grid(True)
-    ax2.set_ylabel('Concentration (mM)', color = 'red', size = 16)
+    ax2.set_ylabel('Concentration (mM)', color = 'black', size = 16)
     for t2 in ax2.get_yticklabels():
         t2.set_color('red')
     # Choose whether or not to save the file.
@@ -137,6 +154,11 @@ def hist_plot(data, t, save = False, fname = '0.png'):
         plt.close()
     return None
     
+def gen_frames(data, t_o, t_f, dt = 1):
+    for t in np.arange(t_o, t_f, dt):
+        hist_plot(data, t, save = True, fname = 'frames\%05d.png' % t)
+    return None
+    
 data = np.zeros((t_final,n_trials))
 for i in range(n_trials):
     # Set start position of bacteria and reset start time
@@ -144,5 +166,9 @@ for i in range(n_trials):
     t = 1
     while(t < t_final):
         data[t,i] = data[t-1,i] + np.random.normal(0.0, sigma, 1) +\
-        calc_v(data[t-1,i], t-1, x_table, c_table, dc_table)*dt
+        calc_v(data[t-1,i], t-1, x_table, c_attract, dc_attract, c_repel, dc_repel)*dt
         t += 1
+        
+k_plot(data, True, 'Kymograph.png')
+pop_plot(data, L + a + 10., True, 'pop_plot.png')
+gen_frames(data, 0, 3600, 10)
