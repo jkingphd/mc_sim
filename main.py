@@ -10,7 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Define parameters of simulation
-L = 1000. # Length of mixing region in µm
+L = 6000. # Length of mixing region in µm
 a = 7010. # Left boundary of initial position sampling in µm
 b = a + L # Right boundary of initial position sampling in µm
 D = 590 # Diffusion coefficient of E-coli in µm^2/s
@@ -22,11 +22,11 @@ sigma = np.sqrt(2*D)
 # Import lookup tables
 s_attract = 0.1
 s_repel = 0.25
-x_table = np.load("tables\L1_x.npy")
-c_attract = np.load("tables\L1_c.npy")*s_attract
-dc_attract = np.load("tables\L1_dc.npy")*1E-6*s_attract # Fix this in import tables later.
-c_repel = np.flipud(np.load("tables\L1_c.npy")*s_repel)
-dc_repel = np.flipud(np.load("tables\L1_dc.npy")*1E-6*s_repel)
+x_table = np.load("tables\L6_x.npy")
+c_attract = np.load("tables\L6_c.npy")*s_attract
+dc_attract = np.load("tables\L6_dc.npy")*s_attract # Fix this in import tables later.
+c_repel = np.flipud(np.load("tables\L6_c.npy")*s_repel)
+dc_repel = np.flipud(np.load("tables\L6_dc.npy")*s_repel)
 
 def int_tables(pos, t, x_table, c_attract, dc_attract):
     '''Interpolate values for c(pos,t) and dc(pos,t)'''

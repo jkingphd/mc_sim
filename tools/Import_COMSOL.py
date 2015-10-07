@@ -15,4 +15,4 @@ data = np.loadtxt(fname, skiprows = 8, delimiter = ',')
 
 np.save(fname.split('.')[0] + '_x.npy', data[:,0]*1E6)
 np.save(fname.split('.')[0] + '_c.npy', data[:,1::2])
-np.save(fname.split('.')[0] + '_dc.npy', data[:,2::2])
+np.save(fname.split('.')[0] + '_dc.npy', data[:,2::2]*1E-6)
