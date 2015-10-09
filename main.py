@@ -10,7 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Define parameters of simulation
-L = 6000. # Length of mixing region in µm
+L = 2000. # Length of mixing region in µm
 a = 7010. # Left boundary of initial position sampling in µm
 b = a + L # Right boundary of initial position sampling in µm
 D = 590 # Diffusion coefficient of E-coli in µm^2/s
@@ -20,13 +20,13 @@ n_trials = 1000 # number of simulations
 sigma = np.sqrt(2*D)
 
 # Import lookup tables
-s_attract = 0.1
-s_repel = 0.25
-x_table = np.load("tables\L6_x.npy")
-c_attract = np.load("tables\L6_c.npy")*s_attract
-dc_attract = np.load("tables\L6_dc.npy")*s_attract # Fix this in import tables later.
-c_repel = np.flipud(np.load("tables\L6_c.npy")*s_repel)
-dc_repel = np.flipud(np.load("tables\L6_dc.npy")*s_repel)
+s_attract = 0.0
+s_repel = 3420.0/2.0
+x_table = np.load("tables\Ethanol_L2_x.npy")
+c_attract = np.load("tables\Ethanol_L2_c.npy")*s_attract
+dc_attract = np.load("tables\Ethanol_L2_dc.npy")*s_attract # Fix this in import tables later.
+c_repel = np.flipud(np.load("tables\Ethanol_L2_c.npy")*s_repel)
+dc_repel = np.flipud(np.load("tables\Ethanol_L2_dc.npy")*s_repel)
 
 def int_tables(pos, t, x_table, c_attract, dc_attract):
     '''Interpolate values for c(pos,t) and dc(pos,t)'''
@@ -114,6 +114,8 @@ def k_plot(data, save = False, fname = '0.png'):
     ax.imshow(graph, cmap = 'hot', interpolation = 'none', aspect = 'auto', extent = (x_table[0],x_table[-1],3600,0))
     ax.set_xlabel('Position ($\mu m$)', color = 'black', size = 16)
     ax.set_ylabel('Time (s)', color = 'black', size = 16)
+    ax.axvspan(a, b, color = 'white', alpha = 0.1, lw = 0)
+    ax.axis([x_table[0],x_table[-1],3600,0])
     # Choose whether or not to save the file.
     if save == False:
         plt.show()
@@ -160,6 +162,7 @@ def gen_frames(data, t_o, t_f, dt = 1):
     return None
     
 data = np.zeros((t_final,n_trials))
+vals = np.arange(0,n_trials,n_trials/10)
 for i in range(n_trials):
     # Set start position of bacteria and reset start time
     data[0,i] = np.random.uniform(a,b)
@@ -167,8 +170,15 @@ for i in range(n_trials):
     while(t < t_final):
         data[t,i] = data[t-1,i] + np.random.normal(0.0, sigma, 1) +\
         calc_v(data[t-1,i], t-1, x_table, c_attract, dc_attract, c_repel, dc_repel)*dt
+        if data[t,i] > x_table[-1]:
+            data[t,i] = x_table[-1]
+        elif data[t,i] < x_table[0]:
+            data[t,i] = x_table[0]
         t += 1
+    if np.any(i == vals):
+        print i
         
 k_plot(data, True, 'Kymograph.png')
 pop_plot(data, L + a + 10., True, 'pop_plot.png')
-gen_frames(data, 0, 3600, 10)
+gen_frames(data, 0, 1800, 10)
+np.save('results.npy', data)
